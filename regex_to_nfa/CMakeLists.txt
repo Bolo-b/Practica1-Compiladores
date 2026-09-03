@@ -6,4 +6,5 @@ add_executable(regex_to_nfa
 ./src/main.c
 ./src/nfa.c
 ./src/regex.c
+./src/stack.c
 )
