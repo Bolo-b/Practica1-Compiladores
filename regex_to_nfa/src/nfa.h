@@ -13,4 +13,5 @@ typedef struct nfa {
     int start;
     int accept;
     int length;
+    int states;
 } nfa;
