@@ -1,3 +1,5 @@
+#ifndef STACK_H
+#define STACK_H
 typedef struct Node {
     void *value;
     struct Node *next;
@@ -8,3 +10,7 @@ void push(Node **top, void *value);
 
 // Return and delete the vale on the top of the stack and return NULL if empty
 void* pop(Node **top);
+
+int is_empty(Node *top);
+
+#endif
