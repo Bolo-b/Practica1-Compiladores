@@ -64,7 +64,7 @@ nfa regex_to_nfa(regex r)
             transition t2 = {p1->snd,state2,EPSILON};
             transitions[actual_transition] = t2; 
             actual_transition++;
-            //transition since state1 to state2, (just skipping)
+            //transition since state1 to state2
             transition t3 = {state1,state2,EPSILON};
             transitions[actual_transition] = t3; 
             actual_transition++;
@@ -156,33 +156,45 @@ nfa regex_to_nfa(regex r)
     return final_nfa;
 }
 
-//Queue structure for BFS
+// Circular Queue structure for BFS
 typedef struct {
     int *data;
-    int head;
-    int tail;
+    int front;
+    int rear;
     int capacity;
 } Queue;
 
 static void queue_init(Queue *q, int *buffer, int capacity) {
     q->data = buffer;
-    q->head = 0;
-    q->tail = 0;
+    q->front = 0;
+    q->rear = 0;
     q->capacity = capacity;
 }
 
 static inline bool queue_is_empty(const Queue *q) {
-    return q->head == q->tail;
+    return q->front == q->rear;
 }
 
-static inline void queue_push(Queue *q, int state) {
-    if (q->tail < q->capacity) {
-        q->data[q->tail++] = state;
+static inline bool queue_is_full(const Queue *q) {
+    return ((q->rear + 1) % q->capacity) == q->front;
+}
+
+static inline bool queue_push(Queue *q, int state) {
+    if (queue_is_full(q)) {
+        return false;
     }
+    q->data[q->rear] = state;
+    q->rear = (q->rear + 1) % q->capacity;
+    return true;
 }
 
 static inline int queue_pop(Queue *q) {
-    return q->data[q->head++];
+    if (queue_is_empty(q)) {
+        return -1;
+    }
+    int state = q->data[q->front];
+    q->front = (q->front + 1) % q->capacity;
+    return state;
 }
 
 //Helper to safely compute the upper bound of state IDs
@@ -198,32 +210,45 @@ static int get_max_states(const nfa *n) {
     return max_id + 1;
 }
 
-//Compute the epsilon closure of a set of states using BFS
+//Compute the epsilon closure of a set of states using BFS with a circular queue
 int epsilon_closure(const nfa *n, const int *current_states, int current_count, 
                     int *out_closure, int max_states) {
-    if (n == NULL || current_states == NULL || current_count <= 0 || out_closure == NULL) {
+    if (n == NULL || current_states == NULL || current_count <= 0 || 
+        out_closure == NULL || max_states <= 0) {
         return 0;
     }
 
-    //Visited array to avoid infinite loops from epsilon cycles (e.g. Kleene star)
+    //Visited array to avoid infinite loops from epsilon cycles
     bool *visited = (bool *)calloc((size_t)max_states, sizeof(bool));
     if (visited == NULL) {
         return 0;
     }
 
-    Queue q;
-    queue_init(&q, out_closure, max_states);
+    //Queue capacity: max_states + 1 allows holding up to max_states elements
+    //with the condition ((rear + 1) % capacity == front)
+    int queue_capacity = max_states + 1;
+    int *queue_buffer = (int *)malloc((size_t)queue_capacity * sizeof(int));
+    if (queue_buffer == NULL) {
+        free(visited);
+        return 0;
+    }
 
-    //1. Enqueue initial states and mark them as visited
+    Queue q;
+    queue_init(&q, queue_buffer, queue_capacity);
+
+    int closure_count = 0;
+
+    //Enqueue initial states, record in closure and mark them as visited
     for (int i = 0; i < current_count; i++) {
         int s = current_states[i];
         if (s >= 0 && s < max_states && !visited[s]) {
             visited[s] = true;
+            out_closure[closure_count++] = s;
             queue_push(&q, s);
         }
     }
 
-    //2. Breadth-First Search (BFS)
+    //Breadth-First Search
     while (!queue_is_empty(&q)) {
         int u = queue_pop(&q);
 
@@ -232,15 +257,17 @@ int epsilon_closure(const nfa *n, const int *current_states, int current_count,
                 int v = n->transitions[i].finish;
                 if (v >= 0 && v < max_states && !visited[v]) {
                     visited[v] = true;
+                    out_closure[closure_count++] = v;
                     queue_push(&q, v);
                 }
             }
         }
     }
 
-    //Free memory of visited array
+    //Free allocated resources
+    free(queue_buffer);
     free(visited);
-    return q.tail;
+    return closure_count;
 }
 
 //Simulate NFA on input buffer: returns 1 if accepted, 0 otherwise
@@ -327,7 +354,7 @@ void free_nfa(nfa *n) {
     }
 }
 
-//Serialize NFA to output file (used by main.c)
+//Serialize NFA to output file 
 bool save_nfa(const nfa *n, const char *output_path) {
     if (n == NULL || output_path == NULL) {
         return false;
