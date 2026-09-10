@@ -41,13 +41,10 @@ while (c != eof)
 #include <ctype.h>
 
 // Agrega items al regex
-void regex_add_item(Regex *r, char c) {
-    if (r->size >= r->capacity) {
-        r->capacity = r->capacity == 0 ? 10 : r->capacity * 2;
-        r->items = (RegexItem *)realloc(r->items, sizeof(RegexItem) * r->capacity);
-    }
-    r->items[r->size].value = c;
-    r->size++;
+void regex_add_item(regex *r, char c) {
+    r->regex_symbols = (char *)realloc(r->regex_symbols, sizeof(char) * (r->length + 1));
+    r->regex_symbols[r->length] = c;
+    r->length++;
 }
 
 // Define la precedencia
@@ -66,11 +63,10 @@ int is_operator(char c) {
 }
 
 
-Regex parse_regex(const char *infix) {
-    Regex result;
-    result.items = NULL;
-    result.size = 0;
-    result.capacity = 0;
+regex parse_regex(const char *infix) {
+    regex result;
+    result.regex_symbols = NULL;
+    result.length = 0;
     
     Node *stack = NULL;  // Pila para operadores
     
@@ -193,11 +189,10 @@ Regex parse_regex(const char *infix) {
 }
 
 // Libera memoria del regex
-void free_regex(Regex *r) {
-    if (r->items) {
-        free(r->items);
-        r->items = NULL;
+void free_regex(regex *r) {
+    if (r->regex_symbols) {
+        free(r->regex_symbols);
+        r->regex_symbols = NULL;
     }
-    r->size = 0;
-    r->capacity = 0;
+    r->length = 0;
 }
