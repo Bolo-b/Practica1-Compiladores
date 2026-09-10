@@ -9,6 +9,10 @@ void regex_add_item(regex *r, char c) {
     r->regex_symbols = (char *)realloc(r->regex_symbols, sizeof(char) * (r->length + 1));
     r->regex_symbols[r->length] = c;
     r->length++;
+
+    r->items = (RegexItem *)realloc(r->items, sizeof(RegexItem) * (r->size + 1));
+    r->items[r->size].value = c;
+    r->size++;
 }
 
 // Precedence definition
@@ -33,6 +37,8 @@ regex parse_regex(const char *infix) {
     regex result;
     result.regex_symbols = NULL;
     result.length = 0;
+    result.items = NULL;
+    result.size = 0;
     
     Node *stack = NULL;  // Stack for operators
     
@@ -45,7 +51,7 @@ regex parse_regex(const char *infix) {
         
         // Reads the implicit concatenation
         if (i > 0 && 
-            ((isalnum(prev_char) || prev_char == ')' || prev_char == '*') && 
+            ((isalnum(prev_char) || prev_char == ')' || prev_char == '*' || prev_char == '+' || prev_char == '?') && 
              (isalnum(c) || c == '('))) {
             // Inserts operator '.'
             char *dot = (char *)malloc(sizeof(char));
@@ -153,5 +159,10 @@ void free_regex(regex *r) {
         free(r->regex_symbols);
         r->regex_symbols = NULL;
     }
+    if (r->items) {
+        free(r->items);
+        r->items = NULL;
+    }
     r->length = 0;
+    r->size = 0;
 }
