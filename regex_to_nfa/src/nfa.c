@@ -25,10 +25,16 @@ nfa regex_to_nfa(regex r)
         switch(r.regex_symbols[i])
         {
         case '*':
-            total_transitions = total_transitions + 4;
+            total_transitions += 4;
+            break;
+        case '+':
+            total_transitions += 3;   // <-- nuevo
+            break;
+        case '?':
+            total_transitions += 3;   // <-- nuevo
             break;
         case '|':
-            total_transitions = total_transitions + 4;
+            total_transitions += 4;
             break;
         case '.':
             total_transitions++;
@@ -132,6 +138,60 @@ nfa regex_to_nfa(regex r)
             free(p2);
             break;
             }
+
+            case '+':
+            {
+            pair *p1 = (pair *)pop(&stack);
+            int state1 = avaiable_state;
+            int state2 = avaiable_state + 1;
+            avaiable_state += 2;
+
+            // state1 -> p1.fst
+            transition t1 = {state1, p1->fst, EPSILON};
+            transitions[actual_transition++] = t1;
+
+            // p1.snd -> p1.fst (loop)
+            transition t2 = {p1->snd, p1->fst, EPSILON};
+            transitions[actual_transition++] = t2;
+
+            // p1.snd -> state2
+            transition t3 = {p1->snd, state2, EPSILON};
+            transitions[actual_transition++] = t3;
+
+            pair *p = malloc(sizeof(pair));
+            p->fst = state1;
+            p->snd = state2;
+            push(&stack, p);
+            free(p1);
+            break;
+            }
+        case '?':
+            {
+            pair *p1 = (pair *)pop(&stack);
+            int state1 = avaiable_state;
+            int state2 = avaiable_state + 1;
+            avaiable_state += 2;
+
+            // state1 -> p1.fst
+            transition t1 = {state1, p1->fst, EPSILON};
+            transitions[actual_transition++] = t1;
+
+            // state1 -> state2 (saltar, épsilon)
+            transition t2 = {state1, state2, EPSILON};
+            transitions[actual_transition++] = t2;
+
+            // p1.snd -> state2
+            transition t3 = {p1->snd, state2, EPSILON};
+            transitions[actual_transition++] = t3;
+
+            pair *p = malloc(sizeof(pair));
+            p->fst = state1;
+            p->snd = state2;
+            push(&stack, p);
+            free(p1);
+            break;
+            }
+        
         default:
             {
             int state1 = avaiable_state;

@@ -1,65 +1,31 @@
-/*
-
-Input:Regex, Op={*,|,.}, precedencia de Op
-Stack = []
-Queue = []
-c = forward()
-while (c != eof)
-{
-    if (c not in Op) then
-        Queue.push(c)
-    else
-        if(c = '()') then
-            stack.push('(')
-        else
-            if (c = ')') then
-                while (stack.pop() != '(')
-                {
-                    queue.push(stack.pop())
-                }
-                stack.pop()
-            else
-                if (c in Op) then
-                    while(!stack.empty() && (stack.pop() != '(') && proc(stack.top) >= c)
-                    {
-                        queue.push(stack.pop())
-                    }
-                    queue.push(stack.pop())
-    while (!stack.empty())
-    {
-        queue.push(stack.pop())
-    }
-    return queue
-}
-*/
-
-
 #include "regex.h"
 #include "stack.h"
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
-// Agrega items al regex
+// Adds items to regex
 void regex_add_item(regex *r, char c) {
     r->regex_symbols = (char *)realloc(r->regex_symbols, sizeof(char) * (r->length + 1));
     r->regex_symbols[r->length] = c;
     r->length++;
 }
 
-// Define la precedencia
+// Precedence definition
 int get_precedence(char c) {
     switch(c) {
-        case '*': return 3;  // +
-        case '.': return 2;
-        case '|': return 1;  // -
-        default: return 0;
+        case '*': return 4; // +
+        case '+': return 4;
+        case '?': return 4;
+        case '.': return 3;
+        case '|': return 2; // -
+        default:  return 0;
     }
 }
 
-// Es operador?
+
 int is_operator(char c) {
-    return c == '*' || c == '|' || c == '.';
+    return c == '*' || c == '+' || c == '?' || c == '|' || c == '.';
 }
 
 
@@ -68,20 +34,20 @@ regex parse_regex(const char *infix) {
     result.regex_symbols = NULL;
     result.length = 0;
     
-    Node *stack = NULL;  // Pila para operadores
+    Node *stack = NULL;  // Stack for operators
     
-    // Variables para la concatenación
+    // Concatenation variables
     char prev_char = '\0';
     int i = 0;
     
     while (infix[i] != '\0') {
         char c = infix[i];
         
-        // Lee la concatenación implícita
+        // Reads the implicit concatenation
         if (i > 0 && 
             ((isalnum(prev_char) || prev_char == ')' || prev_char == '*') && 
              (isalnum(c) || c == '('))) {
-            // Inserta operador de concatenación '.'
+            // Inserts operator '.'
             char *dot = (char *)malloc(sizeof(char));
             *dot = '.';
             
@@ -125,31 +91,24 @@ regex parse_regex(const char *infix) {
             }
         }
         else if (is_operator(c)) {
-            // Verifica si es un operador unario '*'
-            if (c == '*') {
-                char *star = (char *)malloc(sizeof(char));
-                *star = '*';
+            // Checks if the operator is unary
+            if (c == '*' || c == '+' || c == '?') {
+                char *op = (char *)malloc(sizeof(char));
+                *op = c;
                 
-                // Procesa precedencia si hay operadores en la pila
+                // Procesess the precedence if there are more operators in the stack
                 while (stack != NULL) {
                     char *top_val = (char *)(stack->value);
                     if (*top_val == '(') break;
-                    
-                    int prec_top = get_precedence(*top_val);
-                    int prec_star = get_precedence('*');
-                    
-                    if (prec_top >= prec_star) {
+                    if (get_precedence(*top_val) >= get_precedence(c)) {
                         char *popped = (char *)pop(&stack);
                         regex_add_item(&result, *popped);
                         free(popped);
-                    } else {
-                        break;
-                    }
+                    } else break;
                 }
-                
-                push(&stack, star);
+                push(&stack, op);
             } else {
-                // Operadores binarios
+                // For binary operators
                 while (stack != NULL) {
                     char *top_val = (char *)(stack->value);
                     if (*top_val == '(') break;
@@ -176,7 +135,7 @@ regex parse_regex(const char *infix) {
         i++;
     }
     
-    // Vacía la pila
+    // Empties the stack
     while (stack != NULL) {
         char *val = (char *)pop(&stack);
         if (val != NULL) {
@@ -188,7 +147,7 @@ regex parse_regex(const char *infix) {
     return result;
 }
 
-// Libera memoria del regex
+// Frees resources from regex
 void free_regex(regex *r) {
     if (r->regex_symbols) {
         free(r->regex_symbols);
