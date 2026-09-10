@@ -145,16 +145,12 @@ nfa regex_to_nfa(regex r)
             int state1 = avaiable_state;
             int state2 = avaiable_state + 1;
             avaiable_state += 2;
-
-            // state1 -> p1.fst
             transition t1 = {state1, p1->fst, EPSILON};
             transitions[actual_transition++] = t1;
 
-            // p1.snd -> p1.fst (loop)
             transition t2 = {p1->snd, p1->fst, EPSILON};
             transitions[actual_transition++] = t2;
 
-            // p1.snd -> state2
             transition t3 = {p1->snd, state2, EPSILON};
             transitions[actual_transition++] = t3;
 
@@ -172,15 +168,12 @@ nfa regex_to_nfa(regex r)
             int state2 = avaiable_state + 1;
             avaiable_state += 2;
 
-            // state1 -> p1.fst
             transition t1 = {state1, p1->fst, EPSILON};
             transitions[actual_transition++] = t1;
 
-            // state1 -> state2 (saltar, épsilon)
             transition t2 = {state1, state2, EPSILON};
             transitions[actual_transition++] = t2;
 
-            // p1.snd -> state2
             transition t3 = {p1->snd, state2, EPSILON};
             transitions[actual_transition++] = t3;
 
