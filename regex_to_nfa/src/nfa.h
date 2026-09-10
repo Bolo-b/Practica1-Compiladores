@@ -22,6 +22,7 @@ typedef struct nfa {
 } nfa;
 
 // Functions for NFA simulation and management
+nfa regex_to_nfa(regex r);
 int epsilon_closure(const nfa *n, const int *current_states, int current_count, int *out_closure, int max_states);
 int match_nfa(nfa n, char *buf, int len);
 void free_nfa(nfa *n);
